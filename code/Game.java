@@ -13,21 +13,22 @@ public class Game {
 
     private GAME_STATE gameState;
     private int stageIndex;
-    private final ArrayList<Stage> stages;
+    private ArrayList<Stage> stages;
     private int deathNumber;
     private double gameTime;
     private double resetTime;
     private boolean resetGame;
     private boolean isHelpPressed;
+    private boolean isRestartRecentlyPressed;
 
-    private final int[] helpButtonCoords = new int[] { 210, 70, 290, 90 };
-    private final int[] restartButtonCoords = new int[] { 510, 70, 590, 90 };
-    private final int[] resetGameButtonCoords = new int[] { 320, 5, 480, 35 };
-
+    private final int[] HELP_BUTTON_COORDS = new int[] { 210, 75, 290, 105 };
+    private final int[] RESTART_BUTTON_COORDS = new int[] { 510, 75, 590, 105 };
+    private final int[] RESET_GAME_BUTTON_COORDS = new int[] { 320, 5, 480, 35 };
     private final int[] INFO_SECTION_COORDS = new int[] { 0, 0, 800, 120 };
+
     private final Color INFO_SECTION_COLOR = new Color(56, 93, 172);
-    private final Font[] GAME_FONTS = new Font[] { new Font("Arial", Font.PLAIN, 16),
-            new Font("Arial", Font.BOLD, 24) };
+    private final Font[] GAME_FONTS = new Font[] { new Font("Arial", Font.PLAIN, 16), new Font("Arial", Font.BOLD, 24),
+            new Font("Arial", Font.PLAIN, 18) };
 
     public static final int GAME_FPS = 60;
 
@@ -44,6 +45,11 @@ public class Game {
         this.initializeGUI();
     }
 
+    /*
+     * Initialize the GUI
+     * 
+     * @return void
+     */
     private void initializeGUI() {
         final int CANVAS_WIDTH = 800;
         final int CANVAS_HEIGHT = 600;
@@ -54,6 +60,11 @@ public class Game {
         StdDraw.setYscale(0, CANVAS_HEIGHT);
     }
 
+    /*
+     * Play the game
+     * 
+     * @return void
+     */
     public void play() {
         final Player player = new Player();
         final Map map = new Map(this.getCurrentStage(), player);
@@ -65,10 +76,10 @@ public class Game {
 
             handleInput(map);
 
-            map.draw();
-            this.renderInfoBar();
             switch (this.gameState) {
                 case GAME_STATE.PLAYING -> {
+                    map.draw();
+                    this.renderInfoBar();
                     this.gameTime = System.currentTimeMillis() - this.resetTime;
 
                     map.mapCycle();
@@ -83,15 +94,20 @@ public class Game {
         }
     }
 
+    /*
+     * Render the info bar
+     * 
+     * @return void
+     */
     private void renderInfoBar() {
         StdDraw.setPenColor(this.INFO_SECTION_COLOR); // Color of the area
 
         Map.drawRectangleByCoordinates(INFO_SECTION_COORDS, this.INFO_SECTION_COLOR, true);
         StdDraw.setPenColor(StdDraw.WHITE);
 
-        Map.drawButton("Help", this.helpButtonCoords, StdDraw.WHITE);
-        Map.drawButton("Restart", this.restartButtonCoords, StdDraw.WHITE);
-        Map.drawButton("Reset Game", this.resetGameButtonCoords, StdDraw.WHITE);
+        Map.drawButton("Help", this.HELP_BUTTON_COORDS, StdDraw.WHITE);
+        Map.drawButton("Restart", this.RESTART_BUTTON_COORDS, StdDraw.WHITE);
+        Map.drawButton("Reset Game", this.RESET_GAME_BUTTON_COORDS, StdDraw.WHITE);
 
         StdDraw.text(700, 75, "Deaths: " + this.deathNumber);
         StdDraw.text(700, 50, "Stage: " + (this.stageIndex + 1));
@@ -108,12 +124,28 @@ public class Game {
         }
     }
 
-    private boolean isButtonPressed(double[] mouseCoords, int[] buttonCoords) {
+    /*
+     * Check if the mouse is pressed on the button
+     * 
+     * @param int[] buttonCoords
+     * 
+     * @return boolean
+     */
+    private boolean isButtonPressed(int[] buttonCoords) {
+        double[] mouseCoords = new double[] { StdDraw.mouseX(), StdDraw.mouseY() };
+
         boolean isXinRange = mouseCoords[0] >= buttonCoords[0] && mouseCoords[0] <= buttonCoords[2];
         boolean isYinRange = mouseCoords[1] >= buttonCoords[1] && mouseCoords[1] <= buttonCoords[3];
         return isXinRange && isYinRange;
     }
 
+    /*
+     * Set the next stage
+     * 
+     * @param Map map
+     * 
+     * @return void
+     */
     private void setNextStage(Map map) {
         boolean stageIndexInRange = this.stageIndex < this.stages.size() - 1;
         if (stageIndexInRange) {
@@ -128,9 +160,14 @@ public class Game {
         }
     }
 
+    /*
+     * Handle the input
+     * 
+     * @param Map map
+     * 
+     * @return void
+     */
     private void handleInput(Map map) {
-        double[] mouseCoords = new double[] { StdDraw.mouseX(), StdDraw.mouseY() };
-
         final int[] keyCodes = this.getCurrentStage().getKeyCodes();
 
         if (this.gameState == GAME_STATE.PLAYING) {
@@ -141,16 +178,13 @@ public class Game {
             if (StdDraw.isKeyPressed(keyCodes[2]) || keyCodes[2] == -1) map.movePlayer('U');
 
             if (StdDraw.isMousePressed()) {
-                if (isButtonPressed(mouseCoords, this.helpButtonCoords) && !this.isHelpPressed) {
-                    this.isHelpPressed = true;
-                }
-                if (isButtonPressed(mouseCoords, this.restartButtonCoords)) {
-                    map.restartStage();
-                }
-                if (isButtonPressed(mouseCoords, this.resetGameButtonCoords)) {
-                    this.resetGame = true;
-                }
-            }
+                if (isButtonPressed(this.HELP_BUTTON_COORDS) && !this.isHelpPressed) this.isHelpPressed = true;
+
+                if (isButtonPressed(this.RESTART_BUTTON_COORDS)) this.restartStage(map);
+                else this.isRestartRecentlyPressed = false;
+
+                if (isButtonPressed(this.RESET_GAME_BUTTON_COORDS)) this.resetGame = true;
+            } else this.resetStateFlags();
         }
 
         if (this.gameState == GAME_STATE.WINNER) {
@@ -159,6 +193,21 @@ public class Game {
         }
     }
 
+    private void resetStateFlags() {
+        this.isRestartRecentlyPressed = false;
+    }
+
+    /*
+     * Draw the banner
+     * 
+     * @param String[] lines
+     * 
+     * @param Font[] fonts
+     * 
+     * @param boolean showNow
+     * 
+     * @return void
+     */
     private void drawBanner(String[] lines, Font[] fonts, boolean showNow) {
         final int bannerHeight = 200;
         final int bannerWidth = 800;
@@ -188,14 +237,24 @@ public class Game {
         }
     }
 
+    /*
+     * Draw the winner banner
+     * 
+     * @return void
+     */
     private void drawWinnerBanner() {
         String[] lines = { "CONGRATULATIONS! YOU FINISHED THE GAME!", "PRESS A TO RESTART",
-                "You finished the game in " + this.formattedTime() };
-        Font[] fonts = { this.GAME_FONTS[1], this.GAME_FONTS[1], this.GAME_FONTS[0] };
+                "You finished the game with " + this.deathNumber + " deaths in " + this.formattedTime() };
+        Font[] fonts = { this.GAME_FONTS[1], this.GAME_FONTS[1], this.GAME_FONTS[2] };
 
         drawBanner(lines, fonts, false);
     }
 
+    /*
+     * Draw the next stage banner
+     * 
+     * @return void
+     */
     private void drawNextStageBanner() {
         String[] lines = { "You passed the stage!", "But is the level over?!" };
         Font[] fonts = { this.GAME_FONTS[1], this.GAME_FONTS[1] };
@@ -203,14 +262,13 @@ public class Game {
         drawBanner(lines, fonts, true);
     }
 
-    private String formattedTime() {
-        final long totalMilliseconds = Math.max(0, (long) this.gameTime);
-        final long minutes = (totalMilliseconds / 60000);
-        final long seconds = (totalMilliseconds % 60000) / 1000;
-        final long milliseconds = (totalMilliseconds % 1000) / 10; // Divide by 10 to get two digits
-        return String.format("%02d:%02d:%02d", minutes, seconds, milliseconds);
-    }
-
+    /*
+     * Reset the game
+     * 
+     * @param Map map
+     * 
+     * @return void
+     */
     private void resetGame(Map map) {
         this.stageIndex = 0;
         this.deathNumber = 0;
@@ -223,12 +281,49 @@ public class Game {
         this.resetGame = false;
     }
 
+    /*
+     * Restart the stage
+     * 
+     * @param Map map
+     * 
+     * @return void
+     */
     private void restartStage(Map map) {
+        System.out.println(this.isRestartRecentlyPressed);
+        if (this.isRestartRecentlyPressed) return;
         map.restartStage();
         this.deathNumber++;
+        this.isRestartRecentlyPressed = true;
     }
 
+    /*
+     * Format the time
+     * 
+     * @return String
+     */
+    private String formattedTime() {
+        final long totalMilliseconds = Math.max(0, (long) this.gameTime);
+        final long minutes = (totalMilliseconds / 60000);
+        final long seconds = (totalMilliseconds % 60000) / 1000;
+        final long milliseconds = (totalMilliseconds % 1000) / 10; // Divide by 10 to get two digits
+        return String.format("%02d:%02d:%02d", minutes, seconds, milliseconds);
+    }
+
+    /*
+     * Get the stage index
+     * 
+     * @return int
+     */
     public int getStageIndex() { return this.stageIndex; }
 
+    /*
+     * Get the current stage
+     * 
+     * @return Stage
+     */
     public Stage getCurrentStage() { return this.stages.get(this.stageIndex); }
+
+    public static Color generateRandomColor() {
+        return new Color((int) (Math.random() * 256), (int) (Math.random() * 256), (int) (Math.random() * 256));
+    }
 }

@@ -1,33 +1,33 @@
-
-import java.awt.Color;
 // name surname: Ahmet Sait Denizli
 // student ID: 2023400309
 
-public class Map {
+import java.awt.Color;
 
-    private Stage stage;
+public class Map {
     final private Player player;
     final private int[][] obstacles;
     final private int[] button;
     final private int[] buttonFloor;
-    final private int BUTTON_CLICK_HEIGHT = 6;
     final private int[][] startPipe;
     final private int[][] exitPipe;
-    final private Color PIPE_COLOR = new Color(254, 199, 37);
-    final private Color BUTTON_COLOR = new Color(215, 33, 11);
-    final private Color FLOOR_COLOR = new Color(59, 65, 63);
-    final private int[][] spikes;
-    final private int[] DOOR_INITIAL_COORDS;
-    final private int DOOR_ANIMATION_SPEED = 10;
     final private int[] door;
+    final private int[][] spikes;
 
+    private Stage stage;
     private int buttonPressNum;
     private boolean isDoorOpen;
-
     private boolean isButtonPressed;
     private boolean isStageCompleted = false;
     private boolean resetStage = false;
 
+    private boolean isButtonRecentlyPressed = false;
+
+    final private int BUTTON_CLICK_HEIGHT = 6;
+    final private Color PIPE_COLOR = new Color(254, 199, 37);
+    final private Color BUTTON_COLOR = new Color(215, 33, 11);
+    final private Color FLOOR_COLOR = new Color(59, 65, 63);
+    final private int[] DOOR_INITIAL_COORDS;
+    final private int DOOR_ANIMATION_SPEED = 10;
     final private String SPIKE_IMAGE = "misc/spikes.png";
     final private String[] PLAYER_IMAGES = { "misc/elephant-left.png", "misc/elephant-right.png" };
 
@@ -153,9 +153,10 @@ public class Map {
     }
 
     public void mapCycle() {
-        this.stage.updatePosition(player);
-        this.updateAcceleration();
-        this.checkDoorStatus();
+        this.updateAcceleration(player);
+        this.updatePosition();
+        this.handlePlayerCollision(player.getX(), player.getY());
+        this.handleDoorAnimation();
     }
 
     public void movePlayer(char direction) {
@@ -165,46 +166,49 @@ public class Map {
         switch (direction) {
             case 'R' -> {
                 player.setFacing('R');
-                boolean checkRightCollision = checkPlayerCollision(playerX + stage.getVelocityX(), playerY);
-                if (!checkRightCollision) {
-                    player.setX(playerX + stage.getVelocityX());
+                if (stage.getAbleToMove('R')) {
+                    boolean checkRightCollision = checkPlayerCollision(playerX + stage.getVelocityX(), playerY);
+                    if (!checkRightCollision) player.setX(playerX + stage.getVelocityX());
                 }
             }
 
             case 'L' -> {
                 player.setFacing('L');
-                boolean checkLeftCollision = checkPlayerCollision(playerX - stage.getVelocityX(), playerY);
-                if (!checkLeftCollision) {
-                    player.setX(playerX - stage.getVelocityX());
+                if (stage.getAbleToMove('L')) {
+                    boolean checkLeftCollision = checkPlayerCollision(playerX - stage.getVelocityX(), playerY);
+                    if (!checkLeftCollision) player.setX(playerX - stage.getVelocityX());
                 }
             }
 
             case 'U' -> {
                 double nextY = playerY + stage.getVelocityY() / Game.GAME_FPS;
-                boolean isCollidingTop = checkPlayerCollision(playerX, nextY);
-                boolean isCollidingBottom = checkPlayerCollision(playerX, playerY - 10);
+                if (stage.getAbleToMove('U')) {
+                    boolean isCollidingTop = checkPlayerCollision(playerX, nextY);
+                    boolean isCollidingBottom = checkPlayerCollision(playerX, playerY - 10);
 
-                if (player.getVelocityY() != 0 || isCollidingTop || !isCollidingBottom) {
-                    break;
+                    if (player.getVelocityY() != 0 || isCollidingTop || !isCollidingBottom) {
+                        break;
+                    }
+                    player.setVelocityY(stage.getVelocityY());
                 }
-                player.setVelocityY(stage.getVelocityY());
             }
         }
-        this.handlePlayerCollision(player.getX(), player.getY());
     }
 
-    public void checkDoorStatus() {
-        if (!this.isDoorOpen && this.door[1] != this.DOOR_INITIAL_COORDS[1]) {
-            this.door[1] -= this.DOOR_ANIMATION_SPEED;
-            this.door[3] -= this.DOOR_ANIMATION_SPEED;
-        }
-        if (this.isDoorOpen && this.door[1] != this.DOOR_INITIAL_COORDS[3]) {
-            this.door[1] += this.DOOR_ANIMATION_SPEED;
+    private void handleDoorAnimation() {
+        if (!this.isDoorOpen && this.door[3] != this.DOOR_INITIAL_COORDS[3]) {
             this.door[3] += this.DOOR_ANIMATION_SPEED;
         }
+        if (this.isDoorOpen && this.door[3] != this.DOOR_INITIAL_COORDS[1]) {
+            this.door[3] -= this.DOOR_ANIMATION_SPEED;
+        }
     }
 
-    public void updateAcceleration() {
+    private void updateAcceleration(Player player) {
+        player.setVelocityY(player.getVelocityY() + this.stage.getGravity());
+    }
+
+    private void updatePosition() {
         double playerX = player.getX();
         double playerY = player.getY();
 
@@ -215,29 +219,30 @@ public class Map {
             player.setVelocityY(0);
             return;
         }
-
         // If there is no collision, the movement is updated normally.
         player.setY(nextY);
-        this.handlePlayerCollision(player.getX(), player.getY());
     }
 
-    public boolean checkPlayerCollision(double nextX, double nextY) {
+    private boolean checkPlayerCollision(double nextX, double nextY) {
+        if (this.checkButtonCollisions(nextX, nextY)) this.isButtonRecentlyPressed = false;
         return checkObstacleCollisions(nextX, nextY) || checkDoorCollisions(nextX, nextY);
     }
 
-    public void handlePlayerCollision(double nextX, double nextY) {
+    private void handlePlayerCollision(double nextX, double nextY) {
         boolean isCurrentlyOnButton = checkButtonCollisions(nextX, nextY);
 
-        if (isCurrentlyOnButton && !isButtonPressed) {
-            // Oyuncu butona yeni bastı.
-            button[3] -= BUTTON_CLICK_HEIGHT;
-            buttonPressNum++;
-            isDoorOpen = stage.validateDoor(buttonPressNum);
-            isButtonPressed = true;
-        } else if (!isCurrentlyOnButton && isButtonPressed) {
-            // Oyuncu butondan ayrıldı.
-            button[3] += BUTTON_CLICK_HEIGHT;
-            isButtonPressed = false;
+        if (isCurrentlyOnButton) {
+            if (!this.isButtonPressed) {
+                button[3] -= BUTTON_CLICK_HEIGHT;
+                buttonPressNum++;
+                this.isDoorOpen = stage.validateDoor(buttonPressNum);
+                this.isButtonPressed = true;
+            }
+        } else {
+            if (this.isButtonPressed) {
+                button[3] += BUTTON_CLICK_HEIGHT;
+                this.isButtonPressed = false;
+            }
         }
 
         if (checkExitPipeCollisions(nextX, nextY)) {
@@ -249,35 +254,6 @@ public class Map {
         }
     }
 
-    public boolean checkExitPipeCollisions(double nextX, double nextY) {
-        for (final int[] exitPipePart : exitPipe) {
-            if (checkCollision(nextX, nextY, exitPipePart)) return true;
-        }
-        return false;
-    }
-
-    public boolean checkButtonCollisions(double nextX, double nextY) {
-        return checkCollision(nextX, nextY, button);
-    }
-
-    public boolean checkObstacleCollisions(double nextX, double nextY) {
-        for (final int[] obstacle : obstacles) {
-            if (checkCollision(nextX, nextY, obstacle)) return true;
-        }
-        return false;
-    }
-
-    public boolean checkSpikeCollisions(double nextX, double nextY) {
-        for (final int[] spike : spikes) {
-            if (checkCollision(nextX, nextY, spike)) return true;
-        }
-        return false;
-    }
-
-    public boolean checkDoorCollisions(double nextX, double nextY) {
-        return checkCollision(nextX, nextY, door);
-    }
-
     private boolean checkCollision(double nextX, double nextY, int[] obstacle) {
         final double playerWidth = player.getWidth();
         final double playerHeight = player.getHeight();
@@ -286,6 +262,32 @@ public class Map {
         boolean isYCollided = nextY + playerHeight > obstacle[1] && nextY < obstacle[3];
 
         return isXCollided && isYCollided;
+    }
+
+    private boolean checkExitPipeCollisions(double nextX, double nextY) {
+        return checkCollision(nextX, nextY, exitPipe[1]);
+    }
+
+    private boolean checkButtonCollisions(double nextX, double nextY) {
+        return checkCollision(nextX, nextY, button);
+    }
+
+    private boolean checkObstacleCollisions(double nextX, double nextY) {
+        for (final int[] obstacle : obstacles) {
+            if (checkCollision(nextX, nextY, obstacle)) return true;
+        }
+        return false;
+    }
+
+    private boolean checkSpikeCollisions(double nextX, double nextY) {
+        for (final int[] spike : spikes) {
+            if (checkCollision(nextX, nextY, spike)) return true;
+        }
+        return false;
+    }
+
+    private boolean checkDoorCollisions(double nextX, double nextY) {
+        return checkCollision(nextX, nextY, door);
     }
 
     public boolean changeStage() {

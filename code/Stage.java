@@ -11,14 +11,14 @@ public class Stage {
     final private int rightCode;
     final private int leftCode;
     final private int upCode;
+    final private boolean[] ableToMove;
     final private String clue;
     final private String help;
+    final private int requiredNumberOfPress;
     final private Color color;
 
-    private int requiredNumberOfPress;
-
     public Stage(double gravity, double velocityX, double velocityY, int stageNumber, int rightCode, int leftCode,
-            int upCode, String clue, String help) {
+            boolean[] ableToMove, int upCode, String clue, String help, int requiredNumberOfPress) {
         this.gravity = gravity;
         this.velocityX = velocityX;
         this.velocityY = velocityY;
@@ -26,27 +26,26 @@ public class Stage {
         this.rightCode = rightCode;
         this.leftCode = leftCode;
         this.upCode = upCode;
+        this.ableToMove = ableToMove;
         this.clue = clue;
         this.help = help;
-        this.color = this.generateRandomColor();
-        this.requiredNumberOfPress = 1;
-    }
-
-    public void updatePosition(Player player) {
-        player.setVelocityY(player.getVelocityY() + this.gravity);
-
-    }
-
-    private Color generateRandomColor() {
-        return new Color((int) (Math.random() * 256), (int) (Math.random() * 256), (int) (Math.random() * 256));
+        this.color = Game.generateRandomColor();
+        this.requiredNumberOfPress = requiredNumberOfPress;
     }
 
     public boolean validateDoor(int numberOfPress) {
         return numberOfPress >= this.requiredNumberOfPress;
     }
 
-    public void setRequiredNumberOfPress(int requiredNumberOfPress) {
-        this.requiredNumberOfPress = requiredNumberOfPress;
+    public int getRequiredNumberOfPress() { return this.requiredNumberOfPress; }
+
+    public boolean getAbleToMove(char direction) {
+        return switch (direction) {
+            case 'R' -> this.ableToMove[0];
+            case 'L' -> this.ableToMove[1];
+            case 'U' -> this.ableToMove[2];
+            default -> false;
+        };
     }
 
     public int getStageNumber() { return this.stageNumber; }
