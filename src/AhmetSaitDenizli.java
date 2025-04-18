@@ -36,7 +36,9 @@ public class AhmetSaitDenizli {
                 stages.add(s4);
                 stages.add(s5);
 
+                // Create a new game instance
                 Game game = new Game(stages);
+                // Play the game
                 game.play();
         }
 
