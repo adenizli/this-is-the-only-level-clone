@@ -1,6 +1,6 @@
 {
      "java.format.settings.url": ".vscode/java-formatter.xml",
      "java.debug.settings.onBuildFailureProceed": true,
-     "java.project.sourcePaths": [".", "lib", "code"],
+     "java.project.sourcePaths": [".", "lib", "code", "src"],
      "java.project.referencedLibraries": ["/Users/ahmetsaitdenizli/Desktop/Bogazici/Projects/one-level-game/lib/stdLib.jar"]
 }

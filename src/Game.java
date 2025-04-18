@@ -98,7 +98,6 @@ public class Game {
 
         while (true) {
             StdDraw.clear();
-            if (this.resetGame) this.resetGame(map);
 
             handleInput(map);
 
@@ -124,6 +123,7 @@ public class Game {
                 }
                 case GAME_STATE.WINNER -> this.drawWinnerBanner();
             }
+            if (this.resetGame) this.resetGame(map);
 
             // Show the screen regarding the FPS
             StdDraw.show(1000 / GAME_FPS);
@@ -354,6 +354,18 @@ public class Game {
     }
 
     /*
+     * Draw the resetting banner
+     * 
+     * @return void
+     */
+    private void drawResettingBanner() {
+        String[] lines = { "Resetting the game..." };
+        Font[] fonts = { this.GAME_FONTS[1] };
+
+        drawBanner(lines, fonts, true);
+    }
+
+    /*
      * Reset the game
      * 
      * @param Map map
@@ -378,6 +390,13 @@ public class Game {
 
         // Call back the reset game flag
         this.resetGame = false;
+
+        // Draw the resetting banner
+        this.drawResettingBanner();
+
+        // Pause for 2 seconds
+        StdDraw.pause(2000);
+        this.resetTime += 2000;
     }
 
     /*
